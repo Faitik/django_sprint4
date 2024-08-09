@@ -39,7 +39,7 @@ class PostDetailView(DetailView):
     context_object_name = 'post'
 
     def get_object(self, queryset=None):
-        post = get_object_or_404(Post, id=self.kwargs['post_id'])
+        post = get_object_or_404(Post, id=self.kwargs['id'])
         return post
 
     def get_context_data(self, **kwargs):
@@ -120,7 +120,7 @@ class CommentCreateView(CreateView):
 
     def get_success_url(self):
         return reverse('blog:post_detail',
-                       kwargs={'post_id': self.kwargs['post_id']})
+                       kwargs={'id': self.kwargs['post_id']})
 
     def form_valid(self, form):
         form.instance.author = self.request.user

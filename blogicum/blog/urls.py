@@ -1,5 +1,8 @@
 from django.urls import path
 from . import views
+from django.views.generic import DetailView
+from  blog.models import Post  
+
 
 
 app_name = 'blog'
@@ -7,7 +10,7 @@ app_name = 'blog'
 urlpatterns = [
     path('', views.index, name='index'),                             #1
     path(
-        'posts/<int:id>/', views.DetailView.as_view(),
+        'posts/<int:id>/', views.PostDetailView.as_view(),
         name='post_detail'
     ),                                                               #2
     path(

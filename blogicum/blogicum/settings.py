@@ -1,5 +1,7 @@
 from pathlib import Path
 
+CSRF_FAILURE_VIEW = 'blogicum.urls.custom_csrf_failure'
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
