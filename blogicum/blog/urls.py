@@ -1,14 +1,11 @@
 from django.urls import path
 from . import views
-from django.views.generic import DetailView
-from  blog.models import Post  
-
 
 
 app_name = 'blog'
 
 urlpatterns = [
-    path('', views.index, name='index'),                             #1
+    path('', views.PostListView.as_view(), name='index'),                             #1
     path(
         'posts/<int:id>/', views.PostDetailView.as_view(),
         name='post_detail'
@@ -19,17 +16,17 @@ urlpatterns = [
     path('posts/create/', views.post_create, name='create_post'),
 
     path(
-        'posts/<int:post_id>/edit/',
+        'posts/<post_id>/edit/',
         views.EditPostViews.as_view(),                                #4
         name='edit_post',
     ),
     path(
-        'posts/<int:post_id>/delete/',
+        'posts/<post_id>/delete/',
         views.DeletePostView.as_view(),                               #5
         name='delete_post',
     ),
     path(
-        'posts/<int:post_id>/edit_comment/', 
+        'posts/<post_id>/edit_comment/<comment_id>/',
         views.CreateView.as_view(),                                   #6
         name='edit_comment',
     ),
@@ -50,8 +47,8 @@ urlpatterns = [
         name='edit_profile'
     ),
     path(
-        'posts/<post_id>/edit_comment/<comment_id>/',
-        views.CommentUpdateView.as_view(),                            #10
+        'posts/<int:pk>/edit_comment/<int:comment_id>/',
+        views.PostDeleteView.as_view(),                            #10
         name='edit_comment'
     ),
 

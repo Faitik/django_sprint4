@@ -4,11 +4,19 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from .forms import PostForm, CommentForm
-from .models import Post, Category, Comment
+from .models import Post, Category, Comment, User
 from django.views.generic import (
-    CreateView, DeleteView, DetailView, ListView, UpdateView
+    CreateView, DeleteView, DetailView, UpdateView, ListView
 )
-from .models import User
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.paginator import Paginator
+
+
+class OnlyAuthorMixin(UserPassesTestMixin):
+
+    def test_func(self):
+        object = self.get_object()
+        return object.author == self.request.user
 
 
 def get_filter_posts(
@@ -25,15 +33,21 @@ def get_filter_posts(
     )
 
 
-def index(request):
-    post_list = get_filter_posts()[:settings.POSTS_BY_PAGE]
-    context = {'page_obj': post_list}
+class PostListView(ListView):
+    model = Post
+    template_name = 'blog/index.html'
+    context_object_name = 'posts'  # Назовем контекст posts вместо page_obj
+    paginate_by = 3
 
-    return render(request, 'blog/index.html', context)
+    def get_queryset(self):
+        queryset = get_filter_posts()
+        category = self.request.GET.get('category')
+        if category:
+            queryset = queryset.filter(category__name=category)
+        return queryset
 
 
 class PostDetailView(DetailView):
-
     model = Post
     template_name = 'blog/detail.html'
     context_object_name = 'post'
@@ -49,12 +63,7 @@ class PostDetailView(DetailView):
         context['comments'] = comments
         context['form'] = CommentForm()
         return context
-""" def post_detail(request, id):
-    post = get_object_or_404(get_filter_posts(), id=id)
-    context = {'post': post}
 
-    return render(request, 'blog/detail.html', context)
- """
 
 def category_posts(request, category_slug):
     category = get_object_or_404(
@@ -78,15 +87,13 @@ def post_create(request):
 
 
 class EditPostViews(UpdateView):
-    '''Редактирование поста'''
     model = Post
     pk_url_kwarg = 'post_id'
     form_class = PostForm
     template_name = 'blog/create.html'
-
+    
 
 class DeletePostView(DeleteView):
-    '''Удаление поста'''
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
@@ -94,7 +101,7 @@ class DeletePostView(DeleteView):
 
 
 class CommetPostView(CreateView):
-    model = Post
+    model = Comment  #Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
     success_url = reverse_lazy('blog:index')
@@ -137,12 +144,16 @@ class CommentCreateView(CreateView):
 
     def test_func(self):
         return self.request.user.is_authenticated
-    
+
 
 class ProfileUpdateView(UpdateView):
-    model = Post
+    model = User  # Post
     template_name = 'blog/user.html'
     fields = '__all__'
+
+    def test_func(self):
+        object = self.get_object()
+        return object.author == self.request.user
 
     def get_object(self):
         return self.request.user
@@ -153,11 +164,52 @@ class ProfileUpdateView(UpdateView):
             kwargs={'username': self.request.user.username}
         )
 
-class CommentUpdateView(UpdateView):
-    model = Comment
-    
+
+class UserCanDeleteMixin(UserPassesTestMixin):
+
+    def test_func(self):
+        object = self.get_object()
+        return object.author == self.request.user
 
 
-class CommentDeleteView(DeleteView):
+class PostDeleteView(LoginRequiredMixin, UserCanDeleteMixin, DeleteView):
+    model = Post
+    template_name = 'blog/delete.html'  # Используем существующий шаблон
+    success_url = reverse_lazy('blog:index')  # Переадресация после успешного удаления
+
+    def test_func(self):
+        object = self.get_object()
+        return object.author == self.request.user
+
+
+class CommentDeleteView(LoginRequiredMixin, UserCanDeleteMixin, DeleteView):
+    """Форма удаления комментария"""
     model = Comment
-    
+    template_name = 'blog/comment.html'
+    context_object_name = 'comment'
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        form.instance.post = get_object_or_404(
+            Post,
+            pk=self.kwargs['post_id']
+        )
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        post_id = self.kwargs['post_id']
+        return reverse_lazy('post_detail', kwargs={'pk': post_id})
+
+    def get_object(self):
+        comment_id = self.kwargs['comment_id']
+        return get_object_or_404(
+            Comment,
+            id=comment_id,
+            post_id=self.kwargs['post_id']
+        )
+
+    def has_permission(self):
+        obj = self.get_object()
+        return obj.author == self.request.user
+
+
