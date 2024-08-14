@@ -124,6 +124,7 @@ class CommentPostView(CreateView):
         post_id = self.kwargs['post_id']
         post = Post.objects.get(pk=post_id)
         form.instance.post = post
+        form.instance.author = self.request.user
         return super().form_valid(form)
 
 
@@ -145,7 +146,7 @@ class ProfileDetailView(DetailView):
 class ProfileUpdateView(UpdateView):
     model = User
     template_name = 'blog/user.html'
-    fields = ['first_name', 'last_name', 'email']
+    fields = '__all__'
 
     def get_object(self):
         return self.request.user
