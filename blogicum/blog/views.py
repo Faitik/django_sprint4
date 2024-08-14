@@ -32,21 +32,26 @@ def get_filter_posts(is_published=True,
         is_published=is_published,
         pub_date__lte=pub_date_lte,
         category__is_published=category_is_published,
-    )
+    ).order_by('-pub_date')
 
 
 class PostListView(ListView):
     model = Post
     template_name = 'blog/index.html'
     context_object_name = 'posts'
-    paginate_by = 10
+    paginate_by = 10 
 
     def get_queryset(self):
-        queryset = get_filter_posts()  # Убедитесь, что get_filter_posts возвращает корректный queryset
+        queryset = get_filter_posts()
         category = self.request.GET.get('category')
         if category:
-            queryset = queryset.filter(category__name=category)  # Убедитесь, что 'category' это имя поля в вашей модели
+            queryset = queryset.filter(category__name=category)
+        
         return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
 
 
 class PostDetailView(DetailView):
@@ -114,16 +119,18 @@ class DeletePostView(DeleteView):
     success_url = reverse_lazy('blog:index')
 
 
-class CommentPostView(CreateView):
+class CommentPostView(UpdateView):
     model = Comment
     form_class = CommentForm
     template_name = 'blog/create.html'
     success_url = reverse_lazy('blog:index')
 
-    def form_valid(self, form):
+    def get_object(self, queryset=None):
         post_id = self.kwargs['post_id']
-        post = Post.objects.get(pk=post_id)
-        form.instance.post = post
+        comment_id = self.kwargs['comment_id']
+        return get_object_or_404(Comment, pk=comment_id, post_id=post_id)
+
+    def form_valid(self, form):
         form.instance.author = self.request.user
         return super().form_valid(form)
 
