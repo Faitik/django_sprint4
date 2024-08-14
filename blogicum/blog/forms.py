@@ -1,7 +1,6 @@
 from django.utils import timezone
 from django import forms
 from .models import Post, Comment
-from django.shortcuts import get_object_or_404
 
 
 class PostForm(forms.ModelForm):
@@ -12,14 +11,6 @@ class PostForm(forms.ModelForm):
             timezone.now()
         ).strftime('%Y-%m-%dT%H:%M')
 
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        form.instance.post = get_object_or_404(
-            Post,
-            pk=self.kwargs['post_id']
-        )
-        return super().form_valid(form)
-    
     class Meta:
         model = Post
         fields = ('title', 'text', 'image', 'location', 'category', 'pub_date')
@@ -31,14 +22,6 @@ class PostForm(forms.ModelForm):
 
 
 class CommentForm(forms.ModelForm):
-
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        form.instance.post = get_object_or_404(
-            Post,
-            pk=self.kwargs['post_id']
-        )
-        return super().form_valid(form)
 
     class Meta:
         model = Comment

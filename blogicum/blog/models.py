@@ -100,7 +100,6 @@ class Post(Published, Created):
         return reverse('blog:post_detail', args=(self.pk,))
 
 
-
 class Comment(Published, Created):
     author = models.ForeignKey(
         User,
