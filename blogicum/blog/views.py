@@ -111,8 +111,6 @@ class CategoryPostsView(View):
         return render(request, self.template_name, context)
 
 
-
-
 class PostCreateView(LoginRequiredMixin, CreateView):
     """Представление для создания нового поста в блоге"""
     model = Post
@@ -123,10 +121,11 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.author = self.request.user
         return super().form_valid(form)
-    
+
     def get_success_url(self):
         # Redirect to the user's profile after successful creation
         return reverse('blog:profile', kwargs={'username': self.request.user.username})
+
 
 class EditPostView(LoginRequiredMixin, UpdateView):
     """Класс редактирования поста"""
@@ -141,7 +140,7 @@ class EditPostView(LoginRequiredMixin, UpdateView):
             return redirect('blog:post_detail', id=post.id)
             raise PermissionDenied("Вы не можете редактировать чужие посты.")
         return super().dispatch(request, *args, **kwargs)
-    
+
     def get_success_url(self):
         # Redirect to the user's profile after successful edit
         return reverse('blog:post_detail', kwargs={'id': self.object.id})

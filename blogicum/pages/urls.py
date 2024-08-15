@@ -1,6 +1,6 @@
+from django.conf import settings
 from django.urls import path
 from django.views.generic import TemplateView
-
 
 app_name = 'pages'
 
