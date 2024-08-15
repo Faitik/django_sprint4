@@ -20,9 +20,10 @@ class OnlyAuthorMixin(UserPassesTestMixin):
         return object.author == self.request.user
 
 
-def get_filter_posts(is_published=True,
-                     pub_date_lte=None,
-                     category_is_published=True):
+def get_filter_posts(
+        is_published=True,
+        pub_date_lte=None,
+        category_is_published=True):
     if pub_date_lte is None:
         pub_date_lte = timezone.now()
 
@@ -39,14 +40,13 @@ class PostListView(ListView):
     model = Post
     template_name = 'blog/index.html'
     context_object_name = 'posts'
-    paginate_by = 10 
+    paginate_by = 10
 
     def get_queryset(self):
         queryset = get_filter_posts()
         category = self.request.GET.get('category')
         if category:
             queryset = queryset.filter(category__name=category)
-        
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -60,13 +60,11 @@ class PostDetailView(DetailView):
     context_object_name = 'post'
 
     def get_object(self, queryset=None):
-        # Используем safe check для получения объекта
         post = get_object_or_404(Post, id=self.kwargs['id'])
         return post
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Предполагаем, что в модели Comment есть поле post (ForeignKey)
         comments = Comment.objects.filter(
             post=self.object).order_by('created_at')
         context['comments'] = comments
@@ -75,16 +73,23 @@ class PostDetailView(DetailView):
 
 
 class CategoryPostsView(View):
+    """Класс категории постов"""
     template_name = 'blog/category.html'
+    paginate_by = 5
 
     def get(self, request, category_slug):
         category = get_object_or_404(
             Category, slug=category_slug, is_published=True
-            )
+        )
         posts = Post.objects.filter(
-            category=category, category__is_published=True
-            )
-        context = {'category': category, 'post_list': posts}
+            category=category,
+            category__is_published=True
+        )
+        paginator = Paginator(posts, self.paginate_by)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        context = {'category': category, 'page_obj': page_obj}
         return render(request, self.template_name, context)
 
 
@@ -106,6 +111,7 @@ class PostCreateView(CreateView):
 
 
 class EditPostView(UpdateView):
+    """Класс редактирования поста"""
     model = Post
     pk_url_kwarg = 'post_id'
     form_class = PostForm
@@ -113,6 +119,7 @@ class EditPostView(UpdateView):
 
 
 class DeletePostView(DeleteView):
+    """Класс удаления поста"""
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
@@ -135,25 +142,25 @@ class CommentPostView(UpdateView):
         return super().form_valid(form)
 
 
-class ProfileDetailView(DetailView):
+class ProfileDetailView(ListView):
     template_name = 'blog/profile.html'
-    context_object_name = 'profile'
+    context_object_name = 'posts'
+    paginate_by = 5
 
-    def get_object(self):
-        # Получение объекта пользователя по username
-        return get_object_or_404(User, username=self.kwargs['username'])
+    def get_queryset(self):
+        self.user = get_object_or_404(User, username=self.kwargs['username'])
+        return Post.objects.filter(author=self.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Фильтрация постов по автору
-        context['page_obj'] = Post.objects.filter(author=self.object)
+        context['profile'] = self.user
         return context
 
 
 class ProfileUpdateView(UpdateView):
     model = User
     template_name = 'blog/user.html'
-    fields = '__all__'
+    fields = ['first_name', 'last_name', 'email']
 
     def get_object(self):
         return self.request.user
@@ -183,6 +190,7 @@ class PostDeleteView(LoginRequiredMixin, UserCanDeleteMixin, DeleteView):
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
+    """Класс редактирования поста"""
     model = Comment
     form_class = CommentForm
     template_name = 'blog/comment.html'
@@ -205,7 +213,6 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         return context
 
     def get_comment_queryset(self, post):
-        # Здесь вы можете определять ваш queryset для комментариев
         return Comment.objects.filter(post=post).order_by('-created')
 
 
