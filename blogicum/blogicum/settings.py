@@ -45,12 +45,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'blogicum.urls'
 
-TEMPLATES_DIRS = BASE_DIR / 'templates'
+# Заменяем TEMPLATES_DIRS на TEMPLATES_DIR
+TEMPLATES_DIR = BASE_DIR / 'templates'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [TEMPLATES_DIRS],
+        'DIRS': [TEMPLATES_DIR],  # Используем правильное имя переменной
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
