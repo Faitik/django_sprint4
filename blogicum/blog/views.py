@@ -8,6 +8,7 @@ from .models import Post, Category, Comment, User
 from django.views.generic import (
     CreateView, DeleteView, DetailView, UpdateView, ListView
 )
+from django.http import Http404
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
 from django.views import View
@@ -72,9 +73,11 @@ class PostDetailView(DetailView):
     template_name = 'blog/detail.html'
     context_object_name = 'post'
 
-    def get_object(self, queryset=None):
-        post = get_object_or_404(Post, id=self.kwargs['id'])
-        return post
+    def get(self, request, *args, **kwargs):
+        post = self.get_object()
+        if not post.is_published and post.author != request.user:
+            raise Http404("Пост не найден или доступен только автору.")
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -116,14 +119,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     template_name = 'blog/create.html'
     success_url = reverse_lazy('blog:index')
 
-    def dispatch(self, request, *args, **kwargs):
-        post = self.get_object()
-        if post.author != request.user:
-            raise PermissionDenied("Вы не можете редактировать чужие посты.")
-        return super().dispatch(request, *args, **kwargs)
-
     def form_valid(self, form):
-        # Ensure the author is the current user
         form.instance.author = self.request.user
         return super().form_valid(form)
     
@@ -131,20 +127,37 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         # Redirect to the user's profile after successful creation
         return reverse('blog:profile', kwargs={'username': self.request.user.username})
 
-class EditPostView(UpdateView):
+class EditPostView(LoginRequiredMixin, UpdateView):
     """Класс редактирования поста"""
     model = Post
     pk_url_kwarg = 'post_id'
     form_class = PostForm
     template_name = 'blog/create.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        post = self.get_object()
+        if post.author != request.user:
+            return redirect('blog:post_detail', id=post.id)
+            raise PermissionDenied("Вы не можете редактировать чужие посты.")
+        return super().dispatch(request, *args, **kwargs)
+    
+    def get_success_url(self):
+        # Redirect to the user's profile after successful edit
+        return reverse('blog:post_detail', kwargs={'id': self.object.id})
 
-class DeletePostView(DeleteView):
+
+class DeletePostView(LoginRequiredMixin, DeleteView):
     """Класс удаления поста"""
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
     success_url = reverse_lazy('blog:index')
+
+    def dispatch(self, request, *args, **kwargs):
+        post = self.get_object()
+        if post.author != request.user:
+            return redirect('blog:post_detail', id=post.id)
+        return super().dispatch(request, *args, **kwargs)
 
 
 class CommentPostView(UpdateView):
