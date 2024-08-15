@@ -14,19 +14,29 @@ from django.views import View
 
 
 class OnlyAuthorMixin(UserPassesTestMixin):
+    """Миксин для ограничения доступа"""
 
     def test_func(self):
         object = self.get_object()
         return object.author == self.request.user
 
 
+class UserCanDeleteMixin(UserPassesTestMixin):
+    """Миксин, позволяющий удалять объект только в том случае,
+    если текущий пользователь является автором объекта"""
+
+    def test_func(self):
+        object = self.get_object()
+        return object.author == self.request.user
+
+
+"""Возвращает отфильтрованный и упорядоченный по дате список постов"""
 def get_filter_posts(
         is_published=True,
         pub_date_lte=None,
         category_is_published=True):
     if pub_date_lte is None:
         pub_date_lte = timezone.now()
-
     return Post.objects.select_related(
         'author', 'category', 'location'
     ).filter(
@@ -37,6 +47,7 @@ def get_filter_posts(
 
 
 class PostListView(ListView):
+    """Класс отображения постов в блоге"""
     model = Post
     template_name = 'blog/index.html'
     context_object_name = 'posts'
@@ -55,6 +66,7 @@ class PostListView(ListView):
 
 
 class PostDetailView(DetailView):
+    """Представление для отображения детальной информации о посте"""
     model = Post
     template_name = 'blog/detail.html'
     context_object_name = 'post'
@@ -94,20 +106,15 @@ class CategoryPostsView(View):
 
 
 class PostCreateView(CreateView):
+    """Представление для создания нового поста в блоге"""
+    model = Post
+    form_class = PostForm
     template_name = 'blog/create.html'
+    success_url = reverse_lazy('blog:index')
 
-    def get(self, request, *args, **kwargs):
-        form = PostForm()
-        return render(request, self.template_name, {'form': form})
-
-    def post(self, request, *args, **kwargs):
-        form = PostForm(request.POST, files=request.FILES)
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
-            post.save()
-            return redirect('blog:index')
-        return render(request, self.template_name, {'form': form})
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
 
 
 class EditPostView(UpdateView):
@@ -127,6 +134,7 @@ class DeletePostView(DeleteView):
 
 
 class CommentPostView(UpdateView):
+    """Класс для обновления определенного комментария к заданному посту"""
     model = Comment
     form_class = CommentForm
     template_name = 'blog/create.html'
@@ -143,6 +151,7 @@ class CommentPostView(UpdateView):
 
 
 class ProfileDetailView(ListView):
+    """Представление для отображения профиля пользователя с его постами"""
     template_name = 'blog/profile.html'
     context_object_name = 'posts'
     paginate_by = 5
@@ -158,6 +167,7 @@ class ProfileDetailView(ListView):
 
 
 class ProfileUpdateView(UpdateView):
+    """Представление для обновления профиля пользователя"""
     model = User
     template_name = 'blog/user.html'
     fields = ['first_name', 'last_name', 'email']
@@ -172,14 +182,8 @@ class ProfileUpdateView(UpdateView):
         )
 
 
-class UserCanDeleteMixin(UserPassesTestMixin):
-
-    def test_func(self):
-        object = self.get_object()
-        return object.author == self.request.user
-
-
 class PostDeleteView(LoginRequiredMixin, UserCanDeleteMixin, DeleteView):
+    """Представление для удаления поста в блоге"""
     model = Post
     template_name = 'blog/delete.html'
     success_url = reverse_lazy('blog:index')
@@ -190,7 +194,7 @@ class PostDeleteView(LoginRequiredMixin, UserCanDeleteMixin, DeleteView):
 
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
-    """Класс редактирования поста"""
+    """Представление для создания нового комментария к посту"""
     model = Comment
     form_class = CommentForm
     template_name = 'blog/comment.html'
@@ -217,7 +221,7 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
 
 
 class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    """Класс удаления комментария"""
+    """Представление для удаления комментария"""
     model = Comment
     template_name = 'blog/comment.html'
     context_object_name = 'comment'
