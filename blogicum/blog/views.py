@@ -8,6 +8,7 @@ from .models import Post, Category, Comment, User
 from django.views.generic import (
     CreateView, DeleteView, DetailView, UpdateView, ListView
 )
+from django.db.models import Count
 from django.http import Http404
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
@@ -60,7 +61,7 @@ class PostListView(ListView):
         category = self.request.GET.get('category')
         if category:
             queryset = queryset.filter(category__name=category)
-        return queryset
+        return queryset.annotate(comment_count=Count('comments'))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -170,14 +171,19 @@ class CommentPostView(UpdateView):
     def get_object(self, queryset=None):
         post_id = self.kwargs['post_id']
         comment_id = self.kwargs['comment_id']
-        return get_object_or_404(Comment, pk=comment_id, post_id=post_id)
+        comment = get_object_or_404(Comment, pk=comment_id, post_id=post_id)
+
+        if comment.author != self.request.user:
+            raise PermissionDenied("Вы не можете редактировать чужие комментарии.")
+        
+        return comment
 
     def form_valid(self, form):
         form.instance.author = self.request.user
         return super().form_valid(form)
 
 
-class ProfileDetailView(ListView):
+class ProfileDetailView(LoginRequiredMixin, ListView):
     """Представление для отображения профиля пользователя с его постами"""
     template_name = 'blog/profile.html'
     context_object_name = 'posts'
@@ -185,19 +191,30 @@ class ProfileDetailView(ListView):
 
     def get_queryset(self):
         self.user = get_object_or_404(User, username=self.kwargs['username'])
-        return Post.objects.filter(author=self.user, is_published=True)
+        return Post.objects.filter(author=self.user, is_published=True).annotate(comment_count=Count('comments'))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['profile'] = self.user
+        context["username"] = self.user.username
+        #self.user.get_full_name = lambda: f"PIDORAS"
+        full_name = self.user.get_full_name()
+        if not full_name:
+            context['profile'].first_name = self.user.username
         return context
 
 
-class ProfileUpdateView(UpdateView):
+class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     """Представление для обновления профиля пользователя"""
     model = User
     template_name = 'blog/user.html'
     fields = ['first_name', 'last_name', 'email']
+
+    def dispatch(self, request, *args, **kwargs):
+        user = self.get_object()
+        if user != request.user:
+            raise PermissionDenied("Вы не можете редактировать чужой профиль.")
+        return super().dispatch(request, *args, **kwargs)
 
     def get_object(self):
         return self.request.user
