@@ -11,6 +11,7 @@ from django.views.generic import (
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
 from django.views import View
+from django.core.exceptions import PermissionDenied
 
 
 class OnlyAuthorMixin(UserPassesTestMixin):
@@ -108,17 +109,27 @@ class CategoryPostsView(View):
 
 
 
-class PostCreateView(CreateView):
+class PostCreateView(LoginRequiredMixin, CreateView):
     """Представление для создания нового поста в блоге"""
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
     success_url = reverse_lazy('blog:index')
 
+    def dispatch(self, request, *args, **kwargs):
+        post = self.get_object()
+        if post.author != request.user:
+            raise PermissionDenied("Вы не можете редактировать чужие посты.")
+        return super().dispatch(request, *args, **kwargs)
+
     def form_valid(self, form):
+        # Ensure the author is the current user
         form.instance.author = self.request.user
         return super().form_valid(form)
-
+    
+    def get_success_url(self):
+        # Redirect to the user's profile after successful creation
+        return reverse('blog:profile', kwargs={'username': self.request.user.username})
 
 class EditPostView(UpdateView):
     """Класс редактирования поста"""
