@@ -76,7 +76,7 @@ class PostDetailView(DetailView):
 
     def get(self, request, *args, **kwargs):
         post = self.get_object()
-        if (not post.is_published or not post.category.is_published) and post.author != request.user:
+        if (not post.is_published or post.pub_date > timezone.now() or not post.category.is_published) and post.author != request.user:
             raise Http404("Пост не найден или доступен только автору.")
         return super().get(request, *args, **kwargs)
 
