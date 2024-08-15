@@ -102,7 +102,8 @@ class CategoryPostsView(View):
         posts = Post.objects.filter(
             category=category,
             is_published=True,
-            category__is_published=True
+            category__is_published=True,
+            pub_date__lte=timezone.now()
         )
         paginator = Paginator(posts, self.paginate_by)
         page_number = request.GET.get('page')
@@ -191,7 +192,13 @@ class ProfileDetailView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         self.user = get_object_or_404(User, username=self.kwargs['username'])
-        return Post.objects.filter(author=self.user, is_published=True).annotate(comment_count=Count('comments'))
+        if self.request.user == self.user:
+            # Если пользователь просматривает свой профиль, показать все его посты
+            return Post.objects.filter(author=self.user).annotate(comment_count=Count('comments')).order_by('-pub_date')
+        else:
+            # Если профиль просматривает другой пользователь, показать только опубликованные посты
+            return Post.objects.filter(author=self.user, is_published=True).annotate(comment_count=Count('comments')).order_by('-pub_date')
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
