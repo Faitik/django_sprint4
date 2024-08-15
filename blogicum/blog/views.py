@@ -87,7 +87,7 @@ class PostDetailView(DetailView):
 class CategoryPostsView(View):
     """Класс категории постов"""
     template_name = 'blog/category.html'
-    paginate_by = 5
+    paginate_by = 10
 
     def get(self, request, category_slug):
         category = get_object_or_404(
@@ -95,6 +95,7 @@ class CategoryPostsView(View):
         )
         posts = Post.objects.filter(
             category=category,
+            is_published=True,
             category__is_published=True
         )
         paginator = Paginator(posts, self.paginate_by)
@@ -103,6 +104,8 @@ class CategoryPostsView(View):
 
         context = {'category': category, 'page_obj': page_obj}
         return render(request, self.template_name, context)
+
+
 
 
 class PostCreateView(CreateView):
@@ -154,11 +157,11 @@ class ProfileDetailView(ListView):
     """Представление для отображения профиля пользователя с его постами"""
     template_name = 'blog/profile.html'
     context_object_name = 'posts'
-    paginate_by = 5
+    paginate_by = 10
 
     def get_queryset(self):
         self.user = get_object_or_404(User, username=self.kwargs['username'])
-        return Post.objects.filter(author=self.user)
+        return Post.objects.filter(author=self.user, is_published=True)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
