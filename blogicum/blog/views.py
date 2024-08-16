@@ -189,7 +189,7 @@ class CommentPostView(UpdateView):
         return super().form_valid(form)
 
 
-class ProfileDetailView(LoginRequiredMixin, ListView):
+class ProfileDetailView(ListView):
     """Представление для отображения профиля пользователя с его постами"""
     template_name = 'blog/profile.html'
     context_object_name = 'posts'
