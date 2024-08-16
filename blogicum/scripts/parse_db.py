@@ -11,12 +11,14 @@ django.setup()
 
 from blog.models import Category, Location, Post, User
 
+
 def delete_existing_data():
     """Delete all existing Category, Location, Post, and User data."""
     Category.objects.all().delete()
     Location.objects.all().delete()
     Post.objects.all().delete()
     User.objects.all().delete()
+
 
 def create_instance(model_class, fields):
     """Create and save an instance of a model with given fields."""
@@ -33,14 +35,16 @@ def create_instance(model_class, fields):
     # Handle ManyToMany fields after the instance has been saved
     for key, value in m2m_fields.items():
         getattr(instance, key).set(value)
-    
+
     return instance
+
 
 def process_data_by_model(data, model_name, model_class):
     """Process data for a specific model."""
     for row in data:
         if row["model"] == model_name:
             create_instance(model_class, row["fields"])
+
 
 def process_posts(data):
     """Process and create Post instances with proper foreign keys."""
@@ -65,12 +69,13 @@ def process_posts(data):
             for key, value in m2m_fields.items():
                 getattr(post, key).set(value)
 
+
 def main():
     delete_existing_data()
 
     with open('db.json', 'r', encoding="utf-8") as file:
         data = json.load(file)
-        
+
         # Process data in the desired order
         process_data_by_model(data, "blog.location", Location)
         process_data_by_model(data, "auth.user", User)

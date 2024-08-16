@@ -44,7 +44,7 @@ urlpatterns = [
         name='profile'
     ),
     path(
-        'posts/<int:post_id>/comment/', 
+        'posts/<int:post_id>/comment/',
         views.CommentCreateView.as_view(),
         name='comment'
     ),

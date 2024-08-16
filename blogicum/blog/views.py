@@ -24,12 +24,15 @@ class OnlyAuthorMixin(UserPassesTestMixin):
 
 
 class UserCanDeleteMixin(UserPassesTestMixin):
-    """Миксин, позволяющий удалять объект только в том случае,
-    если текущий пользователь является автором объекта"""
+    """
+    Миксин, позволяющий удалять объект только в том случае,
+    если текущий пользователь является автором объекта
+    """
 
     def test_func(self):
         object = self.get_object()
         return object.author == self.request.user
+
 
 def get_filter_posts(
         is_published=True,
@@ -82,8 +85,11 @@ class PostDetailView(DetailView):
         is_category_unpublished = not post.category.is_published
         is_user_not_author = post.author != request.user
 
-        if (is_post_unpublished or is_post_in_future
-            or is_category_unpublished) and is_user_not_author:
+        if (
+            (is_post_unpublished or is_post_in_future or
+            is_category_unpublished)
+            and is_user_not_author
+        )
             raise Http404("Пост не найден или доступен только автору.")
 
         return super().get(request, *args, **kwargs)
@@ -265,6 +271,7 @@ class PostDeleteView(LoginRequiredMixin, UserCanDeleteMixin, DeleteView):
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
     """Представление для создания нового комментария к посту"""
+
     model = Comment
     form_class = CommentForm
     template_name = 'blog/comment.html'
