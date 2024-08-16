@@ -31,8 +31,6 @@ class UserCanDeleteMixin(UserPassesTestMixin):
         object = self.get_object()
         return object.author == self.request.user
 
-
-"""Возвращает отфильтрованный и упорядоченный по дате список постов"""
 def get_filter_posts(
         is_published=True,
         pub_date_lte=None,
@@ -50,6 +48,7 @@ def get_filter_posts(
 
 class PostListView(ListView):
     """Класс отображения постов в блоге"""
+
     model = Post
     template_name = 'blog/index.html'
     context_object_name = 'posts'
@@ -69,6 +68,7 @@ class PostListView(ListView):
 
 class PostDetailView(DetailView):
     """Представление для отображения детальной информации о посте"""
+
     model = Post
     template_name = 'blog/detail.html'
     context_object_name = 'post'
@@ -82,7 +82,8 @@ class PostDetailView(DetailView):
         is_category_unpublished = not post.category.is_published
         is_user_not_author = post.author != request.user
 
-        if (is_post_unpublished or is_post_in_future or is_category_unpublished) and is_user_not_author:
+        if (is_post_unpublished or is_post_in_future
+            or is_category_unpublished) and is_user_not_author:
             raise Http404("Пост не найден или доступен только автору.")
 
         return super().get(request, *args, **kwargs)
@@ -98,6 +99,7 @@ class PostDetailView(DetailView):
 
 class CategoryPostsView(View):
     """Класс категории постов"""
+
     template_name = 'blog/category.html'
     paginate_by = 10
 
@@ -121,6 +123,7 @@ class CategoryPostsView(View):
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     """Представление для создания нового поста в блоге"""
+
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
@@ -138,6 +141,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
 class EditPostView(LoginRequiredMixin, UpdateView):
     """Класс редактирования поста"""
+
     model = Post
     pk_url_kwarg = 'post_id'
     form_class = PostForm
@@ -155,6 +159,7 @@ class EditPostView(LoginRequiredMixin, UpdateView):
 
 class DeletePostView(LoginRequiredMixin, DeleteView):
     """Класс удаления поста"""
+
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
@@ -169,6 +174,7 @@ class DeletePostView(LoginRequiredMixin, DeleteView):
 
 class CommentPostView(UpdateView):
     """Класс для обновления определенного комментария к заданному посту"""
+
     model = Comment
     form_class = CommentForm
     template_name = 'blog/create.html'
@@ -180,7 +186,9 @@ class CommentPostView(UpdateView):
         comment = get_object_or_404(Comment, pk=comment_id, post_id=post_id)
 
         if comment.author != self.request.user:
-            raise PermissionDenied("Вы не можете редактировать чужие комментарии.")
+            raise PermissionDenied(
+                "Вы не можете редактировать чужие комментарии."
+            )
 
         return comment
 
@@ -191,6 +199,7 @@ class CommentPostView(UpdateView):
 
 class ProfileDetailView(ListView):
     """Представление для отображения профиля пользователя с его постами"""
+
     template_name = 'blog/profile.html'
     context_object_name = 'posts'
     paginate_by = 10
@@ -221,6 +230,7 @@ class ProfileDetailView(ListView):
 
 class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     """Представление для обновления профиля пользователя"""
+
     model = User
     template_name = 'blog/user.html'
     fields = ['first_name', 'last_name', 'email']
@@ -243,6 +253,7 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
 
 class PostDeleteView(LoginRequiredMixin, UserCanDeleteMixin, DeleteView):
     """Представление для удаления поста в блоге"""
+
     model = Post
     template_name = 'blog/delete.html'
     success_url = reverse_lazy('blog:index')
@@ -281,6 +292,7 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
 
 class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     """Представление для удаления комментария"""
+
     model = Comment
     template_name = 'blog/comment.html'
     context_object_name = 'comment'
