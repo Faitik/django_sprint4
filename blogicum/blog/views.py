@@ -86,8 +86,7 @@ class PostDetailView(DetailView):
         is_user_not_author = post.author != request.user
 
         if (
-            (is_post_unpublished or is_post_in_future or
-             is_category_unpublished)
+            (is_post_unpublished or is_post_in_future or is_category_unpublished)
             and is_user_not_author
         ):
             raise Http404("Пост не найден или доступен только автору.")
@@ -97,7 +96,8 @@ class PostDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         comments = Comment.objects.filter(
-            post=self.object).order_by('created_at')
+            post=self.object
+        ).order_by('created_at')
         context['comments'] = comments
         context['form'] = CommentForm()
         return context
