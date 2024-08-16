@@ -1,4 +1,3 @@
-from pages.views import csrf_failure, page_not_found, server_error
 from django.conf import settings
 from django.contrib import admin
 from django.urls import path, include, reverse_lazy

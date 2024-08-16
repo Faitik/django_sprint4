@@ -1,10 +1,8 @@
-from django.conf import settings
-from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from .forms import PostForm, CommentForm
-from .models import Post, Category, Comment, User
+from .models import Post, Category, Comment
 from django.views.generic import (
     CreateView, DeleteView, DetailView, UpdateView, ListView
 )
@@ -14,6 +12,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator
 from django.views import View
 from django.core.exceptions import PermissionDenied
+from django.contrib.auth.models import User
 
 
 class OnlyAuthorMixin(UserPassesTestMixin):
@@ -73,12 +72,19 @@ class PostDetailView(DetailView):
     model = Post
     template_name = 'blog/detail.html'
     context_object_name = 'post'
-    pk_url_kwarg = 'id'  # Указываем параметр из URL
+    pk_url_kwarg = 'id'
 
     def get(self, request, *args, **kwargs):
         post = self.get_object()
-        if (not post.is_published or post.pub_date > timezone.now() or not post.category.is_published) and post.author != request.user:
+
+        is_post_unpublished = not post.is_published
+        is_post_in_future = post.pub_date > timezone.now()
+        is_category_unpublished = not post.category.is_published
+        is_user_not_author = post.author != request.user
+
+        if (is_post_unpublished or is_post_in_future or is_category_unpublished) and is_user_not_author:
             raise Http404("Пост не найден или доступен только автору.")
+
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -125,8 +131,9 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        # Redirect to the user's profile after successful creation
-        return reverse('blog:profile', kwargs={'username': self.request.user.username})
+        return reverse(
+            'blog:profile', kwargs={'username': self.request.user.username}
+        )
 
 
 class EditPostView(LoginRequiredMixin, UpdateView):
@@ -140,11 +147,9 @@ class EditPostView(LoginRequiredMixin, UpdateView):
         post = self.get_object()
         if post.author != request.user:
             return redirect('blog:post_detail', id=post.id)
-            raise PermissionDenied("Вы не можете редактировать чужие посты.")
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
-        # Redirect to the user's profile after successful edit
         return reverse('blog:post_detail', kwargs={'id': self.object.id})
 
 
@@ -176,7 +181,7 @@ class CommentPostView(UpdateView):
 
         if comment.author != self.request.user:
             raise PermissionDenied("Вы не можете редактировать чужие комментарии.")
-        
+
         return comment
 
     def form_valid(self, form):
@@ -193,19 +198,24 @@ class ProfileDetailView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         self.user = get_object_or_404(User, username=self.kwargs['username'])
         if self.request.user == self.user:
-            return Post.objects.filter(author=self.user).annotate(comment_count=Count('comments')).order_by('-pub_date')
+            return Post.objects.filter(
+                author=self.user).annotate(
+                    comment_count=Count('comments')).order_by('-pub_date')
         else:
-            return Post.objects.filter(author=self.user, is_published=True).annotate(comment_count=Count('comments')).order_by('-pub_date')
-
+            return Post.objects.filter(
+                author=self.user, is_published=True).annotate(
+                    comment_count=Count('comments')).order_by('-pub_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['profile'] = self.user
-        context["username"] = self.user.username
-        #self.user.get_full_name = lambda: f"PIDORAS"
+        context['username'] = self.user.username
+
         full_name = self.user.get_full_name()
         if not full_name:
             context['profile'].first_name = self.user.username
+
+        context['full_name'] = full_name
         return context
 
 
