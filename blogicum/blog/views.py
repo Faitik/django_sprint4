@@ -87,9 +87,9 @@ class PostDetailView(DetailView):
 
         if (
             (is_post_unpublished or is_post_in_future or
-            is_category_unpublished)
+             is_category_unpublished)
             and is_user_not_author
-        )
+        ):
             raise Http404("Пост не найден или доступен только автору.")
 
         return super().get(request, *args, **kwargs)

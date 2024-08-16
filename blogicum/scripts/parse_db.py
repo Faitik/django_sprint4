@@ -1,3 +1,4 @@
+from blog.models import Category, Location, Post, User
 import sys
 import os
 import django
@@ -8,8 +9,6 @@ sys.path.append("../")
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "blogicum.settings")
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 django.setup()
-
-from blog.models import Category, Location, Post, User
 
 
 def delete_existing_data():
@@ -83,6 +82,7 @@ def main():
         process_posts(data)
 
     print("Data processing complete.")
+
 
 if __name__ == "__main__":
     main()
