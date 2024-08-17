@@ -1,10 +1,7 @@
 from django.contrib import admin
 
 from .models import (
-    Category,
-    Location,
-    Post,
-    Comment
+    Category, Location, Post, Comment
 )
 
 

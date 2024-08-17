@@ -4,16 +4,23 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Count
 from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views import View
-from django.views.generic import CreateView, DeleteView, DetailView, UpdateView, ListView
+from django.views.generic import (
+    CreateView, DeleteView, DetailView, UpdateView, ListView
+)
 
 from .forms import PostForm, CommentForm
 from .models import Post, Category, Comment
 from .utils import get_filter_posts
-from .mixins import UserPassesTestMixin, UserCanDeleteMixin
+from .mixins import (
+    UserPassesTestMixin,
+    UserCanDeleteMixin,
+    AuthorRequiredMixin,
+    OnlyAuthorMixin
+)
 
 
 PAGINATOR_DIRS = 10
@@ -33,10 +40,6 @@ class PostListView(ListView):
         if category:
             queryset = queryset.filter(category__name=category)
         return queryset.annotate(comment_count=Count('comments'))
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        return context
 
 
 class PostDetailView(DetailView):
@@ -111,7 +114,7 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         )
 
 
-class EditPostView(LoginRequiredMixin, UpdateView):
+class EditPostView(AuthorRequiredMixin, OnlyAuthorMixin, UpdateView):
     """Класс редактирования поста"""
 
     model = Post
@@ -119,29 +122,17 @@ class EditPostView(LoginRequiredMixin, UpdateView):
     form_class = PostForm
     template_name = 'blog/create.html'
 
-    def dispatch(self, request, *args, **kwargs):
-        post = self.get_object()
-        if post.author != request.user:
-            return redirect('blog:post_detail', id=post.id)
-        return super().dispatch(request, *args, **kwargs)
-
     def get_success_url(self):
         return reverse('blog:post_detail', kwargs={'id': self.object.id})
 
 
-class DeletePostView(LoginRequiredMixin, DeleteView):
+class DeletePostView(AuthorRequiredMixin, OnlyAuthorMixin, DeleteView):
     """Класс удаления поста"""
 
     model = Post
     pk_url_kwarg = 'post_id'
     template_name = 'blog/create.html'
     success_url = reverse_lazy('blog:index')
-
-    def dispatch(self, request, *args, **kwargs):
-        post = self.get_object()
-        if post.author != request.user:
-            return redirect('blog:post_detail', id=post.id)
-        return super().dispatch(request, *args, **kwargs)
 
 
 class CommentPostView(UpdateView):
@@ -178,14 +169,14 @@ class ProfileDetailView(ListView):
 
     def get_queryset(self):
         self.user = get_object_or_404(User, username=self.kwargs['username'])
-        if self.request.user == self.user:
-            return Post.objects.filter(
-                author=self.user).annotate(
-                    comment_count=Count('comments')).order_by('-pub_date')
-        else:
-            return Post.objects.filter(
-                author=self.user, is_published=True).annotate(
-                    comment_count=Count('comments')).order_by('-pub_date')
+        queryset = Post.objects.filter(author=self.user)
+
+        if self.request.user != self.user:
+            queryset = queryset.filter(is_published=True)
+
+        return queryset.annotate(
+            comment_count=Count('comments')
+            ).order_by('-pub_date')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
