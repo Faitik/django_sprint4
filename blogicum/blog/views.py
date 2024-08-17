@@ -1,52 +1,22 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
+from django.core.paginator import Paginator
+from django.db.models import Count
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.views import View
+from django.views.generic import CreateView, DeleteView, DetailView, UpdateView, ListView
+
 from .forms import PostForm, CommentForm
 from .models import Post, Category, Comment
-from django.views.generic import (
-    CreateView, DeleteView, DetailView, UpdateView, ListView
-)
-from django.db.models import Count
-from django.http import Http404
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.core.paginator import Paginator
-from django.views import View
-from django.core.exceptions import PermissionDenied
-from django.contrib.auth.models import User
+from .utils import get_filter_posts
+from .mixins import UserPassesTestMixin, UserCanDeleteMixin
 
 
-class OnlyAuthorMixin(UserPassesTestMixin):
-    """Миксин для ограничения доступа"""
-
-    def test_func(self):
-        object = self.get_object()
-        return object.author == self.request.user
-
-
-class UserCanDeleteMixin(UserPassesTestMixin):
-    """
-    Миксин, позволяющий удалять объект только в том случае,
-    если текущий пользователь является автором объекта
-    """
-
-    def test_func(self):
-        object = self.get_object()
-        return object.author == self.request.user
-
-
-def get_filter_posts(
-        is_published=True,
-        pub_date_lte=None,
-        category_is_published=True):
-    if pub_date_lte is None:
-        pub_date_lte = timezone.now()
-    return Post.objects.select_related(
-        'author', 'category', 'location'
-    ).filter(
-        is_published=is_published,
-        pub_date__lte=pub_date_lte,
-        category__is_published=category_is_published,
-    ).order_by('-pub_date')
+PAGINATOR_DIRS = 10
 
 
 class PostListView(ListView):
@@ -55,7 +25,7 @@ class PostListView(ListView):
     model = Post
     template_name = 'blog/index.html'
     context_object_name = 'posts'
-    paginate_by = 10
+    paginate_by = PAGINATOR_DIRS
 
     def get_queryset(self):
         queryset = get_filter_posts()
@@ -103,7 +73,7 @@ class CategoryPostsView(View):
     """Класс категории постов"""
 
     template_name = 'blog/category.html'
-    paginate_by = 10
+    paginate_by = PAGINATOR_DIRS
 
     def get(self, request, category_slug):
         category = get_object_or_404(
@@ -204,7 +174,7 @@ class ProfileDetailView(ListView):
 
     template_name = 'blog/profile.html'
     context_object_name = 'posts'
-    paginate_by = 10
+    paginate_by = PAGINATOR_DIRS
 
     def get_queryset(self):
         self.user = get_object_or_404(User, username=self.kwargs['username'])

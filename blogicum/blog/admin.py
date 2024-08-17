@@ -1,8 +1,14 @@
 from django.contrib import admin
 
-from .models import Category, Location, Post
+from .models import (
+    Category,
+    Location,
+    Post,
+    Comment
+)
 
 
+@admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     search_fields = ('text',)
     list_display = ('id', 'is_published', 'created_at', 'title',
@@ -12,6 +18,7 @@ class CategoryAdmin(admin.ModelAdmin):
     empty_value_display = 'pub_date'
 
 
+@admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
     search_fields = ('text',)
     list_display = ('id', 'is_published', 'created_at', 'name',)
@@ -20,6 +27,7 @@ class LocationAdmin(admin.ModelAdmin):
     empty_value_display = 'Не задано'
 
 
+@admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
     search_fields = ('text',)
     list_display = ('id', 'title', 'author', 'text', 'category',
@@ -30,6 +38,4 @@ class PostAdmin(admin.ModelAdmin):
     empty_value_display = 'Не задано'
 
 
-admin.site.register(Category, CategoryAdmin)
-admin.site.register(Location, LocationAdmin)
-admin.site.register(Post, PostAdmin)
+admin.site.register(Comment)

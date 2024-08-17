@@ -1,9 +1,12 @@
-from django.db import models
-from django.contrib.auth import get_user_model
-from django.urls import reverse
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import models
+from django.urls import reverse
 
 User = get_user_model()
+
+
+MAX_TEXT_LENGTH = 30
 
 
 class Published(models.Model):
@@ -120,4 +123,4 @@ class Comment(Published, Created):
         ordering = ('created_at',)
 
     def __str__(self):
-        return self.text[:30]
+        return self.text[MAX_TEXT_LENGTH]
